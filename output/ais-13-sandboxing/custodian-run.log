@@ -1,0 +1,2 @@
+2026-10-17 21:34:39,322 - custodian.policy - INFO - policy:ais-13-sandboxing resource:ec2 region:us-east-1 count:1 time:2.25
+2026-10-18 18:51:15,295 - custodian.policy - INFO - policy:ais-13-sandboxing resource:ec2 region:us-east-1 count:1 time:2.15

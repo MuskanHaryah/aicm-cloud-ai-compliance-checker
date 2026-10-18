@@ -1,0 +1,8 @@
+Control,Title,Status,Flagged
+MDS-08,Model Integrity Checks,FAIL,gemma-model-bad
+DSP-21,Data Poisoning Prevention & Detection,FAIL,gemma-data-bad
+TVM-13,Guardrails,FAIL,gemma-inference-bad
+AIS-11,Agents Security Boundaries,FAIL,gemma-inference-sg-bad
+AIS-13,AI Sandboxing,FAIL,gemma-inference-bad
+LOG-16,Output Monitoring,FAIL,/gemma/inference-bad
+IAM-18,Agent Access Restriction,FAIL,gemma-inference-bad

@@ -1,0 +1,102 @@
+policies:
+  # MDS-08 Model Integrity Checks: versioning + KMS encryption + hash tag
+  - name: mds-08-model-integrity
+    resource: s3
+    filters:
+      - type: value
+        key: Name
+        op: regex
+        value: "^gemma-model"
+      - or:
+        - type: value
+          key: Versioning.Status
+          op: ne
+          value: Enabled
+        - type: bucket-encryption
+          state: false
+        - "tag:model-sha256": absent
+
+  # DSP-21 Data Poisoning Prevention: versioned + not public
+  - name: dsp-21-data-poisoning
+    resource: s3
+    filters:
+      - type: value
+        key: Name
+        op: regex
+        value: "^gemma-data"
+      - or:
+        - type: value
+          key: Versioning.Status
+          op: ne
+          value: Enabled
+        - type: check-public-block
+          BlockPublicAcls: false
+
+  # TVM-13 Guardrails: inference instance must carry guardrail=enabled
+  - name: tvm-13-guardrails
+    resource: ec2
+    filters:
+      - type: value
+        key: "tag:Name"
+        op: glob
+        value: "gemma-inference-*"
+      - not:
+        - "tag:guardrail": enabled
+
+  # AIS-11 Agent Security Boundaries: inference port not open to the world
+  - name: ais-11-agent-boundaries
+    resource: security-group
+    filters:
+      - type: value
+        key: GroupName
+        op: regex
+        value: "^gemma-inference"
+      - type: ingress
+        Ports: [11434]
+        Cidr:
+          value: "0.0.0.0/0"
+
+  # AIS-13 AI Sandboxing: IMDSv2 required and no public IP
+  - name: ais-13-sandboxing
+    resource: ec2
+    filters:
+      - type: value
+        key: "tag:Name"
+        op: glob
+        value: "gemma-inference-*"
+      - or:
+        - type: value
+          key: MetadataOptions.HttpTokens
+          op: ne
+          value: required
+        - type: value
+          key: PublicIpAddress
+          value: present
+
+  # LOG-16 Output Monitoring: log group retention set and >= 90 days
+  - name: log-16-output-monitoring
+    resource: log-group
+    filters:
+      - type: value
+        key: logGroupName
+        op: regex
+        value: "^/gemma/"
+      - or:
+        - type: value
+          key: retentionInDays
+          value: absent
+        - type: value
+          key: retentionInDays
+          value_type: integer
+          op: lt
+          value: 90
+
+  # IAM-18 Agent Access Restriction: no Allow * on *
+  - name: iam-18-agent-access-restriction
+    resource: iam-policy
+    filters:
+      - type: value
+        key: PolicyName
+        op: regex
+        value: "^gemma-"
+      - type: has-allow-all

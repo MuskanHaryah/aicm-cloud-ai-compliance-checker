@@ -1,0 +1,16 @@
+[
+  {
+    "logGroupName": "/gemma/inference-bad",
+    "creationTime": 1792330784575,
+    "metricFilterCount": 0,
+    "arn": "arn:aws:logs:us-east-1:123456789012:log-group:/gemma/inference-bad:*",
+    "storedBytes": 0,
+    "logGroupArn": "arn:aws:logs:us-east-1:123456789012:log-group:/gemma/inference-bad",
+    "Tags": [],
+    "c7n:MatchedFilters": [
+      "logGroupName",
+      "retentionInDays",
+      "retentionInDays"
+    ]
+  }
+]

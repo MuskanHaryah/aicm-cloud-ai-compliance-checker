@@ -1,0 +1,83 @@
+{
+  "policy": {
+    "name": "iam-18-agent-access-restriction",
+    "resource": "iam-policy",
+    "filters": [
+      {
+        "type": "value",
+        "key": "PolicyName",
+        "op": "regex",
+        "value": "^gemma-"
+      },
+      {
+        "type": "has-allow-all"
+      }
+    ]
+  },
+  "version": "0.9.53",
+  "execution": {
+    "id": "d6d94421-ba31-4463-b134-3d8fe5c67181",
+    "start": 1792331479.6717086,
+    "end_time": 1792331487.9516087,
+    "duration": 8.279900074005127
+  },
+  "config": {
+    "region": "us-east-1",
+    "regions": [
+      "us-east-1"
+    ],
+    "cache": "~/.cache/cloud-custodian.cache",
+    "vars_file": null,
+    "profile": null,
+    "account_id": "123456789012",
+    "assume_role": null,
+    "session_policy": null,
+    "external_id": null,
+    "log_group": null,
+    "tracer": null,
+    "metrics_enabled": null,
+    "metrics": null,
+    "output_dir": "output",
+    "cache_period": 0,
+    "dryrun": false,
+    "authorization_file": null,
+    "subparser": "run",
+    "config": null,
+    "configs": [
+      "policies/aicm-controls.yml"
+    ],
+    "policy_filters": [],
+    "resource_types": [],
+    "verbose": null,
+    "quiet": null,
+    "debug": false,
+    "skip_validation": false,
+    "command": "c7n.commands.run"
+  },
+  "sys-stats": {},
+  "api-stats": {
+    "iam.ListPolicies": 1,
+    "tagging.GetResources": 1,
+    "iam.GetPolicyVersion": 2
+  },
+  "metrics": [
+    {
+      "MetricName": "ResourceCount",
+      "Timestamp": "2026-10-18T18:51:27.949303",
+      "Value": 1,
+      "Unit": "Count"
+    },
+    {
+      "MetricName": "ResourceTime",
+      "Timestamp": "2026-10-18T18:51:27.949331",
+      "Value": 8.25903034210205,
+      "Unit": "Seconds"
+    },
+    {
+      "MetricName": "ActionTime",
+      "Timestamp": "2026-10-18T18:51:27.951585",
+      "Value": 9.059906005859375e-06,
+      "Unit": "Seconds"
+    }
+  ]
+}

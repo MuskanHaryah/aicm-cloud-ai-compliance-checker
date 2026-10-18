@@ -1,0 +1,95 @@
+{
+  "policy": {
+    "name": "log-16-output-monitoring",
+    "resource": "log-group",
+    "filters": [
+      {
+        "type": "value",
+        "key": "logGroupName",
+        "op": "regex",
+        "value": "^/gemma/"
+      },
+      {
+        "or": [
+          {
+            "type": "value",
+            "key": "retentionInDays",
+            "value": "absent"
+          },
+          {
+            "type": "value",
+            "key": "retentionInDays",
+            "value_type": "integer",
+            "op": "lt",
+            "value": 90
+          }
+        ]
+      }
+    ]
+  },
+  "version": "0.9.53",
+  "execution": {
+    "id": "8a099276-758d-478b-a2e5-9c9fc05cede9",
+    "start": 1792331475.30353,
+    "end_time": 1792331479.6701624,
+    "duration": 4.366632461547852
+  },
+  "config": {
+    "region": "us-east-1",
+    "regions": [
+      "us-east-1"
+    ],
+    "cache": "~/.cache/cloud-custodian.cache",
+    "vars_file": null,
+    "profile": null,
+    "account_id": "123456789012",
+    "assume_role": null,
+    "session_policy": null,
+    "external_id": null,
+    "log_group": null,
+    "tracer": null,
+    "metrics_enabled": null,
+    "metrics": null,
+    "output_dir": "output",
+    "cache_period": 0,
+    "dryrun": false,
+    "authorization_file": null,
+    "subparser": "run",
+    "config": null,
+    "configs": [
+      "policies/aicm-controls.yml"
+    ],
+    "policy_filters": [],
+    "resource_types": [],
+    "verbose": null,
+    "quiet": null,
+    "debug": false,
+    "skip_validation": false,
+    "command": "c7n.commands.run"
+  },
+  "sys-stats": {},
+  "api-stats": {
+    "logs.DescribeLogGroups": 1,
+    "tagging.GetResources": 1
+  },
+  "metrics": [
+    {
+      "MetricName": "ResourceCount",
+      "Timestamp": "2026-10-18T18:51:19.669172",
+      "Value": 1,
+      "Unit": "Count"
+    },
+    {
+      "MetricName": "ResourceTime",
+      "Timestamp": "2026-10-18T18:51:19.669185",
+      "Value": 4.36212158203125,
+      "Unit": "Seconds"
+    },
+    {
+      "MetricName": "ActionTime",
+      "Timestamp": "2026-10-18T18:51:19.670151",
+      "Value": 5.245208740234375e-06,
+      "Unit": "Seconds"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+c7n
+moto[server]
+boto3

@@ -1,0 +1,57 @@
+[
+  {
+    "GroupId": "sg-1453f2efdff6b50e4",
+    "IpPermissionsEgress": [
+      {
+        "IpProtocol": "-1",
+        "UserIdGroupPairs": [],
+        "IpRanges": [
+          {
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Ipv6Ranges": [],
+        "PrefixListIds": []
+      }
+    ],
+    "Tags": [],
+    "VpcId": "vpc-3d8f4d95b8d2635ca",
+    "SecurityGroupArn": "arn:aws:ec2:us-east-1:123456789012:security-group/sg-1453f2efdff6b50e4",
+    "OwnerId": "123456789012",
+    "GroupName": "gemma-inference-sg-bad",
+    "Description": "gemma-inference-sg-bad",
+    "IpPermissions": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 11434,
+        "ToPort": 11434,
+        "UserIdGroupPairs": [],
+        "IpRanges": [
+          {
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Ipv6Ranges": [],
+        "PrefixListIds": []
+      }
+    ],
+    "c7n:MatchedFilters": [
+      "GroupName"
+    ],
+    "MatchedIpPermissions": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 11434,
+        "ToPort": 11434,
+        "IpRanges": [
+          {
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Ipv6Ranges": [],
+        "PrefixListIds": [],
+        "UserIdGroupPairs": []
+      }
+    ]
+  }
+]

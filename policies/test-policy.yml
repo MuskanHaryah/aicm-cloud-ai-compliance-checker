@@ -1,0 +1,3 @@
+policies:
+  - name: list-s3-buckets
+    resource: s3

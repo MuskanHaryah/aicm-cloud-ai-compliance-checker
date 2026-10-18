@@ -1,0 +1,2 @@
+2026-10-17 21:34:06,063 - custodian.policy - INFO - policy:mds-08-model-integrity resource:s3 region:us-east-1 count:1 time:26.80
+2026-10-18 18:50:43,788 - custodian.policy - INFO - policy:mds-08-model-integrity resource:s3 region:us-east-1 count:1 time:25.91

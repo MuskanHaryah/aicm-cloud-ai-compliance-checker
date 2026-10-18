@@ -1,0 +1,103 @@
+{
+  "policy": {
+    "name": "dsp-21-data-poisoning",
+    "resource": "s3",
+    "filters": [
+      {
+        "type": "value",
+        "key": "Name",
+        "op": "regex",
+        "value": "^gemma-data"
+      },
+      {
+        "or": [
+          {
+            "type": "value",
+            "key": "Versioning.Status",
+            "op": "ne",
+            "value": "Enabled"
+          },
+          {
+            "type": "check-public-block",
+            "BlockPublicAcls": false
+          }
+        ]
+      }
+    ]
+  },
+  "version": "0.9.53",
+  "execution": {
+    "id": "8945f9ee-3a9b-4162-9357-e5136a4b237b",
+    "start": 1792331443.7944787,
+    "end_time": 1792331468.8173647,
+    "duration": 25.022886037826538
+  },
+  "config": {
+    "region": "us-east-1",
+    "regions": [
+      "us-east-1"
+    ],
+    "cache": "~/.cache/cloud-custodian.cache",
+    "vars_file": null,
+    "profile": null,
+    "account_id": "123456789012",
+    "assume_role": null,
+    "session_policy": null,
+    "external_id": null,
+    "log_group": null,
+    "tracer": null,
+    "metrics_enabled": null,
+    "metrics": null,
+    "output_dir": "output",
+    "cache_period": 0,
+    "dryrun": false,
+    "authorization_file": null,
+    "subparser": "run",
+    "config": null,
+    "configs": [
+      "policies/aicm-controls.yml"
+    ],
+    "policy_filters": [],
+    "resource_types": [],
+    "verbose": null,
+    "quiet": null,
+    "debug": false,
+    "skip_validation": false,
+    "command": "c7n.commands.run"
+  },
+  "sys-stats": {},
+  "api-stats": {
+    "s3.ListBuckets": 1,
+    "s3.GetBucketLocation": 4,
+    "s3.GetBucketTagging": 4,
+    "s3.GetBucketPolicy": 4,
+    "s3.GetBucketAcl": 4,
+    "s3.GetBucketReplication": 4,
+    "s3.GetBucketVersioning": 4,
+    "s3.GetBucketWebsite": 4,
+    "s3.GetBucketLogging": 4,
+    "s3.GetBucketNotificationConfiguration": 4,
+    "s3.GetBucketLifecycleConfiguration": 4,
+    "s3.GetPublicAccessBlock": 2
+  },
+  "metrics": [
+    {
+      "MetricName": "ResourceCount",
+      "Timestamp": "2026-10-18T18:51:08.815127",
+      "Value": 1,
+      "Unit": "Count"
+    },
+    {
+      "MetricName": "ResourceTime",
+      "Timestamp": "2026-10-18T18:51:08.815146",
+      "Value": 25.017476081848145,
+      "Unit": "Seconds"
+    },
+    {
+      "MetricName": "ActionTime",
+      "Timestamp": "2026-10-18T18:51:08.817334",
+      "Value": 9.5367431640625e-06,
+      "Unit": "Seconds"
+    }
+  ]
+}
