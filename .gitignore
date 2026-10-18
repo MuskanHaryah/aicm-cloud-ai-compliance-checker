@@ -1,0 +1,11 @@
+# virtual environment
+aicm-env/
+venv/
+.venv/
+
+# Cloud Custodian run output (regenerated on every run)
+output/
+
+# python
+__pycache__/
+*.pyc

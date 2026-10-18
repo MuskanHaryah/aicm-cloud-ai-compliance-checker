@@ -1,2 +1,0 @@
-2026-10-17 21:34:43,879 - custodian.policy - INFO - policy:log-16-output-monitoring resource:log-group region:us-east-1 count:1 time:4.53
-2026-10-18 18:51:19,668 - custodian.policy - INFO - policy:log-16-output-monitoring resource:log-group region:us-east-1 count:1 time:4.36

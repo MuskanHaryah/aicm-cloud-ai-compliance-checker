@@ -1,6 +1,0 @@
-2026-10-17 20:23:23,706 - custodian.filters - INFO - 1 of 2 iam policies have allow all.
-2026-10-17 20:23:23,707 - custodian.policy - INFO - policy:iam-18-agent-access-restriction resource:iam-policy region:us-east-1 count:1 time:8.98
-2026-10-17 21:34:52,232 - custodian.filters - INFO - 1 of 2 iam policies have allow all.
-2026-10-17 21:34:52,236 - custodian.policy - INFO - policy:iam-18-agent-access-restriction resource:iam-policy region:us-east-1 count:1 time:8.35
-2026-10-18 18:51:27,930 - custodian.filters - INFO - 1 of 2 iam policies have allow all.
-2026-10-18 18:51:27,931 - custodian.policy - INFO - policy:iam-18-agent-access-restriction resource:iam-policy region:us-east-1 count:1 time:8.26

@@ -1,2 +1,0 @@
-2026-10-17 21:34:34,779 - custodian.policy - INFO - policy:tvm-13-guardrails resource:ec2 region:us-east-1 count:1 time:2.44
-2026-10-18 18:51:11,020 - custodian.policy - INFO - policy:tvm-13-guardrails resource:ec2 region:us-east-1 count:1 time:2.20
