@@ -1,6 +1,28 @@
+# Cloud Custodian policies: one policy per testable sub-check of the 7 selected AICM controls.
+# Every policy lists NON-COMPLIANT resources only (the filters describe the violation).
+# controls.json maps policies to controls and stores the expected result of the seeded test.
+#
+# Project parameters (NOT part of the AICM text; change them to your own policy):
+#   model integrity re-verification max age ..... 365 days  (AICM MDS-08 says "at least annually")
+#   guardrail review max age .................... 180 days  (AICM TVM-11 gives no number)
 policies:
-  # MDS-08 Model Integrity Checks: versioning + KMS encryption + hash tag
-  - name: mds-08-model-integrity
+
+  # ======================= MDS-08 Model Integrity Checks =======================
+  - name: mds-08-baseline-checksum-format
+    resource: s3
+    filters:
+      - type: value
+        key: Name
+        op: regex
+        value: "^gemma-model"
+      - not:
+        - type: value
+          key: "tag:model-sha256"
+          op: regex
+          value: "^[0-9a-f]{64}$"
+  # The checkpoint itself is re-hashed by checker.py (builtin check "checkpoint-rehash").
+
+  - name: mds-08-verification-recency
     resource: s3
     filters:
       - type: value
@@ -9,15 +31,16 @@ policies:
         value: "^gemma-model"
       - or:
         - type: value
-          key: Versioning.Status
-          op: ne
-          value: Enabled
-        - type: bucket-encryption
-          state: false
-        - "tag:model-sha256": absent
+          key: "tag:integrity-verified-at"
+          value: absent
+        - type: value
+          key: "tag:integrity-verified-at"
+          value_type: age
+          op: gt
+          value: 365
 
-  # DSP-21 Data Poisoning Prevention: versioned + not public
-  - name: dsp-21-data-poisoning
+  # ======================= DSP-21 Data Poisoning Prevention & Detection =======================
+  - name: dsp-21-public-access-block
     resource: s3
     filters:
       - type: value
@@ -25,78 +48,187 @@ policies:
         op: regex
         value: "^gemma-data"
       - or:
-        - type: value
-          key: Versioning.Status
-          op: ne
-          value: Enabled
         - type: check-public-block
           BlockPublicAcls: false
+        - type: check-public-block
+          IgnorePublicAcls: false
+        - type: check-public-block
+          BlockPublicPolicy: false
+        - type: check-public-block
+          RestrictPublicBuckets: false
 
-  # TVM-13 Guardrails: inference instance must carry guardrail=enabled
-  - name: tvm-13-guardrails
+  - name: dsp-21-public-acl
+    resource: s3
+    filters:
+      - type: value
+        key: Name
+        op: regex
+        value: "^gemma-data"
+      - type: global-grants
+
+  - name: dsp-21-access-logging
+    resource: s3
+    filters:
+      - type: value
+        key: Name
+        op: regex
+        value: "^gemma-data"
+      - type: value
+        key: Logging
+        value: empty
+  # The dataset content is verified against manifest.json by checker.py (builtin "dataset-manifest").
+
+  # ======================= TVM-11 Guardrails =======================
+  - name: tvm-11-guardrail-declared
     resource: ec2
     filters:
       - type: value
         key: "tag:Name"
         op: glob
         value: "gemma-inference-*"
-      - not:
-        - "tag:guardrail": enabled
+      - type: value
+        key: State.Name
+        op: in
+        value: [pending, running, stopped]
+      - type: value
+        key: "tag:guardrail-id"
+        value: absent
+  # That the referenced guardrail really exists is checked by checker.py (builtin "guardrail-exists").
 
-  # AIS-11 Agent Security Boundaries: inference port not open to the world
-  - name: ais-11-agent-boundaries
+  - name: tvm-11-guardrail-review
+    resource: ec2
+    filters:
+      - type: value
+        key: "tag:Name"
+        op: glob
+        value: "gemma-inference-*"
+      - type: value
+        key: State.Name
+        op: in
+        value: [pending, running, stopped]
+      - type: value
+        key: "tag:guardrail-id"
+        value: present
+      - or:
+        - type: value
+          key: "tag:guardrail-reviewed-at"
+          value: absent
+        - type: value
+          key: "tag:guardrail-reviewed-at"
+          value_type: age
+          op: gt
+          value: 180
+
+  # ======================= AIS-11 Agents Security Boundaries =======================
+  - name: ais-11-inference-port-open
     resource: security-group
     filters:
       - type: value
         key: GroupName
         op: regex
         value: "^gemma-inference"
-      - type: ingress
-        Ports: [11434]
-        Cidr:
-          value: "0.0.0.0/0"
+      - or:
+        - type: ingress
+          Ports: [11434]
+          Cidr:
+            value: "0.0.0.0/0"
+        - type: ingress
+          Ports: [11434]
+          CidrV6:
+            value: "::/0"
 
-  # AIS-13 AI Sandboxing: IMDSv2 required and no public IP
-  - name: ais-13-sandboxing
+  - name: ais-11-vpc-flow-logs
+    resource: vpc
+    filters:
+      - type: value
+        key: "tag:Name"
+        op: glob
+        value: "gemma-vpc*"
+      - type: flow-logs
+        enabled: false
+
+  # ======================= AIS-13 AI Sandboxing =======================
+  - name: ais-13-imdsv2
     resource: ec2
     filters:
       - type: value
         key: "tag:Name"
         op: glob
         value: "gemma-inference-*"
-      - or:
-        - type: value
-          key: MetadataOptions.HttpTokens
-          op: ne
-          value: required
-        - type: value
-          key: PublicIpAddress
-          value: present
+      - type: value
+        key: State.Name
+        op: in
+        value: [pending, running, stopped]
+      - type: value
+        key: MetadataOptions.HttpTokens
+        op: ne
+        value: required
 
-  # LOG-16 Output Monitoring: log group retention set and >= 90 days
-  - name: log-16-output-monitoring
+  - name: ais-13-imds-hop-limit
+    resource: ec2
+    filters:
+      - type: value
+        key: "tag:Name"
+        op: glob
+        value: "gemma-inference-*"
+      - type: value
+        key: State.Name
+        op: in
+        value: [pending, running, stopped]
+      - type: value
+        key: MetadataOptions.HttpPutResponseHopLimit
+        value_type: integer
+        op: gt
+        value: 1
+
+  - name: ais-13-no-public-ip
+    resource: ec2
+    filters:
+      - type: value
+        key: "tag:Name"
+        op: glob
+        value: "gemma-inference-*"
+      - type: value
+        key: State.Name
+        op: in
+        value: [pending, running, stopped]
+      - type: value
+        key: PublicIpAddress
+        value: present
+
+  - name: ais-13-egress-restricted
+    resource: ec2
+    filters:
+      - type: value
+        key: "tag:Name"
+        op: glob
+        value: "gemma-inference-*"
+      - type: value
+        key: State.Name
+        op: in
+        value: [pending, running, stopped]
+      - or:
+        - type: security-group
+          key: "IpPermissionsEgress[].IpRanges[].CidrIp"
+          op: contains
+          value: "0.0.0.0/0"
+        - type: security-group
+          key: "IpPermissionsEgress[].Ipv6Ranges[].CidrIpv6"
+          op: contains
+          value: "::/0"
+
+  # ======================= LOG-15 Output Monitoring =======================
+  - name: log-15-monitoring-destination
     resource: log-group
     filters:
       - type: value
         key: logGroupName
         op: regex
-        value: "^/gemma/"
-      - or:
-        - type: value
-          key: retentionInDays
-          value: absent
-        - type: value
-          key: retentionInDays
-          value_type: integer
-          op: lt
-          value: 90
+        value: "^/gemma/inference"
+      - not:
+        - type: subscription-filter
+  # The log CONTENT (output + metadata fields) is verified by checker.py (builtin "output-event-fields").
 
-  # IAM-18 Agent Access Restriction: no Allow * on *
-  - name: iam-18-agent-access-restriction
-    resource: iam-policy
-    filters:
-      - type: value
-        key: PolicyName
-        op: regex
-        value: "^gemma-"
-      - type: has-allow-all
+  # ======================= IAM-19 Agent Access Restriction =======================
+  # No Custodian policy: wildcard actions / wildcard resources in attached and inline policies are
+  # analysed by checker.py (builtins "wildcard-action" and "wildcard-resource").

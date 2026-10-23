@@ -1,0 +1,17 @@
+# TVM-11, REAL AWS ONLY. moto does not implement Amazon Bedrock guardrails (CreateGuardrail
+# raises "not implemented"), so this policy cannot be run or seeded locally. It is syntax-checked
+# with `custodian validate`, but its behaviour has NOT been tested. Run it against a sandbox
+# account with:  custodian run -s output-aws policies/aws-only/tvm-11-bedrock-guardrail.yml
+policies:
+  - name: tvm-11-bedrock-guardrail-not-ready
+    resource: aws.bedrock-guardrail
+    description: A Bedrock guardrail used for the Gemma workload exists but is not READY.
+    filters:
+      - type: value
+        key: name
+        op: regex
+        value: "^gemma"
+      - type: value
+        key: status
+        op: ne
+        value: READY

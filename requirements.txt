@@ -1,3 +1,4 @@
-c7n
-moto[server]
+c7n==0.9.53
+moto[server]==5.2.4
 boto3
+pyyaml

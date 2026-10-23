@@ -1,0 +1,334 @@
+{
+  "aicm_version": "1.0 (as in the supplied sheet 'Auditing Guidelines of AICM v1.0 based on CCM v4.0.1')",
+  "workload": "gemma3n:e4b",
+  "note": "Control IDs, titles and specifications were read from the supplied official AICM xlsx. 'basis' says where each check comes from; project parameters (365/180/90 days) are not part of the AICM.",
+  "parameters": {
+    "model_integrity_reverify_days": 365,
+    "guardrail_review_max_age_days": 180
+  },
+  "controls": [
+    {
+      "id": "MDS-08",
+      "title": "Model Integrity Checks",
+      "domain": "Model Security",
+      "scopes": {
+        "s3": "gemma-model*"
+      },
+      "official_spec": "Regularly calculate and compare checksums using cryptographic hashes of model checkpoints to detect unauthorized modifications. Apply at least annually based on the level of risk, or after any change of hands.",
+      "coverage": "partial",
+      "limitation": "Checks the stored checkpoint (re-hash against the baseline) and its storage hygiene. The baseline lives in a bucket tag next to the checkpoint, so an attacker who can write to the bucket could change both; real protection needs a signed baseline kept elsewhere (see MDS-09).",
+      "not_checked": [
+        "Procedures for verifying models received from upstream providers or after a change of hands",
+        "Escalation and remediation process for a failed integrity check",
+        "Secure communication of checksums to downstream consumers",
+        "Integrity of the model file inside the local Ollama host (see verify_ollama_weights.py)"
+      ],
+      "checks": [
+        {
+          "policy": "mds-08-baseline-checksum-format",
+          "violation": "Baseline checksum tag model-sha256 is missing or not a valid SHA-256 (64 hex).",
+          "basis": "spec: 'calculate ... checksums using cryptographic hashes'",
+          "expected_noncompliant": [
+            "gemma-model-bad-notag",
+            "gemma-model-bad-tagformat"
+          ],
+          "on": "s3"
+        },
+        {
+          "builtin": "checkpoint-rehash",
+          "violation": "The checkpoint was re-hashed and its SHA-256 no longer equals the recorded baseline (unauthorized modification).",
+          "basis": "spec: 'compare checksums ... to detect unauthorized modifications'",
+          "expected_noncompliant": [
+            "gemma-model-bad-tampered"
+          ],
+          "on": "s3"
+        },
+        {
+          "policy": "mds-08-verification-recency",
+          "violation": "Integrity was not re-verified within 365 days (tag integrity-verified-at missing or too old).",
+          "basis": "spec: 'Apply at least annually'",
+          "expected_noncompliant": [
+            "gemma-model-bad-stale"
+          ],
+          "on": "s3"
+        }
+      ]
+    },
+    {
+      "id": "DSP-21",
+      "title": "Data Poisoning Prevention & Detection",
+      "domain": "Data Security and Privacy Lifecycle Management",
+      "scopes": {
+        "s3": "gemma-data*"
+      },
+      "official_spec": "Define, implement and evaluate processes, procedures and technical measures to prevent data poisoning in AI models and continuously detect such.",
+      "coverage": "partial",
+      "limitation": "Detects tampering AFTER a dataset was approved (manifest re-hash) and checks storage controls. It cannot recognise poisoned samples that were already in the data when the manifest was created.",
+      "not_checked": [
+        "Content-level detection of poisoned or biased samples (data quality filters, anomaly detection on the data itself)",
+        "Adversarial training / sanitization techniques",
+        "Incident response plans and staff training",
+        "Real-time monitoring of data flows"
+      ],
+      "checks": [
+        {
+          "policy": "dsp-21-public-access-block",
+          "violation": "Public access block missing or fewer than all four settings on: outsiders could modify or expose the data.",
+          "basis": "audit guideline AP-5/MP-5: strict access control",
+          "expected_noncompliant": [
+            "gemma-data-bad-pab"
+          ],
+          "on": "s3"
+        },
+        {
+          "policy": "dsp-21-public-acl",
+          "violation": "Bucket ACL grants access to AllUsers/AuthenticatedUsers.",
+          "basis": "audit guideline AP-5/MP-5: strict access control",
+          "expected_noncompliant": [
+            "gemma-data-bad-acl"
+          ],
+          "on": "s3"
+        },
+        {
+          "policy": "dsp-21-access-logging",
+          "violation": "Server access logging is off: modifications of the data are not recorded.",
+          "basis": "audit guideline AP-7: monitoring to detect poisoning attempts",
+          "expected_noncompliant": [
+            "gemma-data-bad-logging"
+          ],
+          "on": "s3"
+        },
+        {
+          "builtin": "dataset-manifest",
+          "violation": "Dataset objects differ from the approved manifest.json (modified, injected or missing objects, or no manifest).",
+          "basis": "spec: 'continuously detect' poisoning; audit guideline AP-10: automated integrity checks",
+          "expected_noncompliant": [
+            "gemma-data-bad-tampered"
+          ],
+          "on": "s3"
+        }
+      ]
+    },
+    {
+      "id": "TVM-11",
+      "title": "Guardrails",
+      "domain": "Threat & Vulnerability Management",
+      "scopes": {
+        "ec2": "gemma-inference-*"
+      },
+      "official_spec": "Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios.",
+      "coverage": "weak",
+      "limitation": "Only shows that a guardrail is declared, that it exists and that its owner recorded a recent review. It does NOT prove that the guardrail blocks anything. Behavioural testing needs a live guardrail (on AWS: Amazon Bedrock ApplyGuardrail, see guardrail_probe.py); moto does not implement Bedrock guardrails.",
+      "not_checked": [
+        "Whether the guardrail really filters prompts and outputs (behavioural test)",
+        "Documented processes, scope, roles and responsibilities",
+        "Compliance with regulatory requirements",
+        "Efficacy and efficiency metrics for the guardrail",
+        "The review date is a tag set by the owner: it is not proof that a real review happened"
+      ],
+      "checks": [
+        {
+          "policy": "tvm-11-guardrail-declared",
+          "violation": "Instance has no guardrail-id tag: no guardrail is applied to this AI system.",
+          "basis": "spec: 'apply guardrails to the AI system'",
+          "expected_noncompliant": [
+            "gemma-inference-bad-noguardrail"
+          ],
+          "on": "ec2"
+        },
+        {
+          "builtin": "guardrail-exists",
+          "violation": "The guardrail named in guardrail-id does not exist (no Lambda function / Bedrock guardrail with that name).",
+          "basis": "audit guideline AP-3: measures are concretely implemented",
+          "expected_noncompliant": [
+            "gemma-inference-bad-guardrail-missing"
+          ],
+          "on": "ec2"
+        },
+        {
+          "policy": "tvm-11-guardrail-review",
+          "violation": "Guardrail review is older than 180 days (tag guardrail-reviewed-at missing or too old; 180 days is a project parameter).",
+          "basis": "spec: 'Continuously evaluate guardrails'; audit guideline AP-5",
+          "expected_noncompliant": [
+            "gemma-inference-bad-guardrail-stale"
+          ],
+          "on": "ec2"
+        }
+      ]
+    },
+    {
+      "id": "AIS-11",
+      "title": "Agents Security Boundaries",
+      "domain": "Application & Interface Security",
+      "scopes": {
+        "sg": "gemma-inference-sg-*",
+        "vpc": "gemma-vpc-*"
+      },
+      "official_spec": "Establish security boundaries for agents.",
+      "coverage": "weak",
+      "limitation": "Network boundary and boundary monitoring only. Agent roles, authorised tool/API lists, prompt hardening and step-wise confirmations are application-level and cannot be seen from cloud configuration.",
+      "not_checked": [
+        "Formal definition of agent roles, authorised actions and accessible APIs",
+        "Prompt hardening / input validation against re-programming of agents",
+        "User override or step-wise confirmation for sensitive agent actions",
+        "Review of monitoring results and update of boundaries",
+        "Tool-to-tool boundaries inside the agent application"
+      ],
+      "checks": [
+        {
+          "policy": "ais-11-inference-port-open",
+          "violation": "Inference port 11434 is reachable from the whole internet (IPv4, IPv6 or through a port range).",
+          "basis": "audit guideline CSP-2: network isolation of agent deployments",
+          "expected_noncompliant": [
+            "gemma-inference-sg-bad-v4",
+            "gemma-inference-sg-bad-v6",
+            "gemma-inference-sg-bad-range"
+          ],
+          "on": "sg"
+        },
+        {
+          "policy": "ais-11-vpc-flow-logs",
+          "violation": "VPC has no flow logs: boundary violations cannot be audited.",
+          "basis": "audit guideline AP-4/CSP-3: monitoring and auditable logs for unauthorized actions",
+          "expected_noncompliant": [
+            "gemma-vpc-bad-noflowlogs"
+          ],
+          "on": "vpc"
+        }
+      ]
+    },
+    {
+      "id": "AIS-13",
+      "title": "AI Sandboxing",
+      "domain": "Application & Interface Security",
+      "scopes": {
+        "ec2": "gemma-inference-*"
+      },
+      "official_spec": "Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.",
+      "coverage": "weak",
+      "limitation": "Instance-level isolation settings only. No container or process sandbox, resource limit, timeout, file-system or IPC isolation of tools and plugins is verified.",
+      "not_checked": [
+        "Container/VM isolation of each tool or plugin",
+        "Resource limits (CPU, memory) and execution timeouts",
+        "File-system isolation and inter-process communication restrictions",
+        "Plugin approval and third-party integration requirements"
+      ],
+      "checks": [
+        {
+          "policy": "ais-13-imdsv2",
+          "violation": "IMDSv2 is not required: a tool that is tricked into an SSRF can steal the instance credentials.",
+          "basis": "spec: prevent interaction with critical systems / lateral movement; audit guideline AP-2.1 API access limits",
+          "expected_noncompliant": [
+            "gemma-inference-bad-imdsv1"
+          ],
+          "on": "ec2"
+        },
+        {
+          "policy": "ais-13-imds-hop-limit",
+          "violation": "Metadata hop limit > 1: containers/proxies on the host can reach the instance credentials.",
+          "basis": "audit guideline AP-2.1: isolation of containers",
+          "expected_noncompliant": [
+            "gemma-inference-bad-hops"
+          ],
+          "on": "ec2"
+        },
+        {
+          "policy": "ais-13-no-public-ip",
+          "violation": "Instance has a public IP address.",
+          "basis": "audit guideline AP-2.1: network access restrictions",
+          "expected_noncompliant": [
+            "gemma-inference-bad-publicip"
+          ],
+          "on": "ec2"
+        },
+        {
+          "policy": "ais-13-egress-restricted",
+          "violation": "Attached security group allows egress to 0.0.0.0/0 or ::/0 (no egress control).",
+          "basis": "audit guideline AP-2.1: 'network access restrictions and egress controls'",
+          "expected_noncompliant": [
+            "gemma-inference-bad-egress"
+          ],
+          "on": "ec2"
+        }
+      ]
+    },
+    {
+      "id": "LOG-15",
+      "title": "Output Monitoring",
+      "domain": "Logging and Monitoring",
+      "scopes": {
+        "logs": "/gemma/inference"
+      },
+      "official_spec": "Log and monitor all output events (content and metadata) to enable auditing and reporting on usage of AI models.",
+      "coverage": "partial",
+      "limitation": "Checks that output events are logged with content and metadata (newest 50 events sampled), encrypted, retained and forwarded to a monitor. It cannot prove that EVERY output is logged or that harmful outputs are detected.",
+      "not_checked": [
+        "Completeness: every output event is logged (only a sample is inspected)",
+        "Confidence scores, risk categorisation, detection of hallucinations and policy violations",
+        "Restriction of access to the output logs (IAM level)",
+        "Reporting / usage analytics"
+      ],
+      "checks": [
+        {
+          "policy": "log-15-monitoring-destination",
+          "violation": "No subscription filter: outputs are logged but not forwarded to any monitor.",
+          "basis": "spec: 'Log and monitor all output events'",
+          "expected_noncompliant": [
+            "/gemma/inference-bad-unmonitored"
+          ],
+          "on": "logs"
+        },
+        {
+          "builtin": "output-event-fields",
+          "violation": "Logged events do not contain the output content and metadata (output, model, request_id, user_id), or nothing is logged.",
+          "basis": "spec: 'content and metadata'; audit guideline AP-2.1/2.2",
+          "expected_noncompliant": [
+            "/gemma/inference-bad-fields",
+            "/gemma/inference-bad-empty"
+          ],
+          "on": "logs"
+        }
+      ]
+    },
+    {
+      "id": "IAM-19",
+      "title": "Agent Access Restriction",
+      "domain": "Identity & Access Management",
+      "scopes": {
+        "iam-role": "gemma-inference-role-"
+      },
+      "official_spec": "Restrict access in agent-based solutions to only the tools and plugins strictly necessary for the activity or use case at hand, ensuring resource segregation and adherence to the principle of least privilege.",
+      "coverage": "partial",
+      "limitation": "Judges the permissions of the agent's IAM role by wildcard analysis. It cannot decide whether a narrowly written permission is really 'strictly necessary' for the use case. moto has no IAM policy simulator.",
+      "not_checked": [
+        "Whether each permitted tool/plugin is strictly necessary for the use case",
+        "Separation of duties over agent provisioning, credentials and execution",
+        "Rotation and monitoring of agent credentials",
+        "Periodic review of agent activity logs, approval of overrides",
+        "Runtime behaviour of the agent"
+      ],
+      "checks": [
+        {
+          "builtin": "wildcard-action",
+          "violation": "Allow statement with Action '*' or 'service:*' in an attached or inline policy.",
+          "basis": "spec: 'only the tools and plugins strictly necessary ... least privilege'",
+          "expected_noncompliant": [
+            "gemma-inference-role-bad-admin",
+            "gemma-inference-role-bad-action"
+          ],
+          "on": "iam-role"
+        },
+        {
+          "builtin": "wildcard-resource",
+          "violation": "Allow statement with Resource '*' in an attached or inline policy (no resource segregation).",
+          "basis": "spec: 'ensuring resource segregation'",
+          "expected_noncompliant": [
+            "gemma-inference-role-bad-admin",
+            "gemma-inference-role-bad-resource"
+          ],
+          "on": "iam-role"
+        }
+      ]
+    }
+  ]
+}

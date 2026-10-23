@@ -1,0 +1,8 @@
+Control,Title,Status,Flagged
+MDS-08,Model Integrity Checks,FAIL,"gemma-model-bad-notag, gemma-model-bad-stale, gemma-model-bad-tagformat, gemma-model-bad-tampered"
+DSP-21,Data Poisoning Prevention & Detection,FAIL,"gemma-data-bad-acl, gemma-data-bad-logging, gemma-data-bad-pab, gemma-data-bad-tampered"
+TVM-11,Guardrails,FAIL,"gemma-inference-bad-guardrail-missing, gemma-inference-bad-guardrail-stale, gemma-inference-bad-noguardrail"
+AIS-11,Agents Security Boundaries,FAIL,"gemma-inference-sg-bad-range, gemma-inference-sg-bad-v4, gemma-inference-sg-bad-v6, gemma-vpc-bad-noflowlogs"
+AIS-13,AI Sandboxing,FAIL,"gemma-inference-bad-egress, gemma-inference-bad-hops, gemma-inference-bad-imdsv1, gemma-inference-bad-publicip"
+LOG-15,Output Monitoring,FAIL,"/gemma/inference-bad-empty, /gemma/inference-bad-fields, /gemma/inference-bad-unmonitored"
+IAM-19,Agent Access Restriction,FAIL,"gemma-inference-role-bad-action, gemma-inference-role-bad-admin, gemma-inference-role-bad-resource"

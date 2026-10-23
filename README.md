@@ -1,139 +1,105 @@
 # Automated Compliance Checking of Cloud AI Systems (CSA AICM)
 
-Cloud Custodian policies that check the cloud infrastructure around an open-source
-AI model (Gemma 3n E4B, `gemma3n:e4b`) against 7 CSA AI Controls Matrix (AICM)
-controls. Everything runs locally against **moto**, a fake AWS, so no AWS account
-or cost is needed.
+Cloud Custodian policies (plus a few Python content checks) that test the cloud set-up around an
+open-source model (Gemma 3n E4B, `gemma3n:e4b`) against 7 controls of the CSA AI Controls Matrix.
+The tool creates GOOD and single-fault BAD resources, runs the checks, and proves that every
+check flags exactly its own violation. It runs on **moto** (fake AWS) first, then on a real AWS
+sandbox account.
 
-| Control | Title | Policy name |
+Control IDs, titles and specifications were read from the supplied official sheet
+*Auditing Guidelines of AICM v1.0 (based on CCM v4.0.1)*; the exact AICM text is stored in
+`controls.json` (`official_spec`).
+
+| Control | Title (official) | Checks |
 |---|---|---|
-| MDS-08 | Model Integrity Checks | `mds-08-model-integrity` |
-| DSP-21 | Data Poisoning Prevention & Detection | `dsp-21-data-poisoning` |
-| TVM-13 | Guardrails | `tvm-13-guardrails` |
-| AIS-11 | Agents Security Boundaries | `ais-11-agent-boundaries` |
-| AIS-13 | AI Sandboxing | `ais-13-sandboxing` |
-| LOG-16 | Output Monitoring | `log-16-output-monitoring` |
-| IAM-18 | Agent Access Restriction | `iam-18-agent-access-restriction` |
+| MDS-08 | Model Integrity Checks | baseline SHA-256 tag valid · **checkpoint re-hashed and compared** · re-verified within 365 days |
+| DSP-21 | Data Poisoning Prevention & Detection | public access block · no public ACL · access logging · **dataset re-hashed against approved manifest** |
+| TVM-11 | Guardrails | guardrail declared · guardrail exists · reviewed within 180 days |
+| AIS-11 | Agents Security Boundaries | inference port 11434 not world-open · VPC flow logs |
+| AIS-13 | AI Sandboxing | IMDSv2 · hop limit 1 · no public IP · egress restricted |
+| LOG-15 | Output Monitoring | subscription filter (monitor) · **events contain output + metadata** |
+| IAM-19 | Agent Access Restriction | no wildcard action (incl. AdministratorAccess) · no wildcard resource |
 
-Custodian checks cloud configuration only (bucket settings, security groups, IAM,
-logs, tags). It does not look inside the model. Each control is therefore checked
-through a configuration proxy.
+IDs corrected from the earlier version: `TVM-13 → TVM-11`, `LOG-16 → LOG-15`, `IAM-18 → IAM-19`
+(in the official sheet TVM-13 is "Threat Response", IAM-18 is "Output Modification and Special
+Authorization", and LOG-16 does not exist). Each check in `controls.json` has a `basis` field:
+the AICM spec sentence, the audit-guideline item, or "project hardening/parameter". Only checks that test the control text itself were kept (hardening extras such as versioning, KMS, TLS-only and a log-retention number were removed). The numbers
+365 / 180 days are **project parameters**: 365 comes from "at least annually", 180 is our own choice.
+
+## What can and cannot be tested
+
+| Control | Moto (local) | Real AWS | Cannot be checked from cloud configuration at all |
+|---|---|---|---|
+| MDS-08 | all 3 checks | all 3 (a real 7 GB checkpoint can be uploaded and is re-hashed by streaming) | upstream-provider verification process, escalation process. Local Ollama file: `verify_ollama_weights.py` (not cloud) |
+| DSP-21 | all 4 checks | all 4 | poisoned records that were already in the data when the manifest was approved; adversarial training; incident response |
+| TVM-11 | 3 checks on a Lambda stand-in guardrail | same, or Bedrock guardrail via `policies/aws-only/` | **whether the guardrail actually blocks anything**. Only `guardrail_probe.py` on real AWS (Bedrock ApplyGuardrail). moto has no Bedrock guardrails |
+| AIS-11 | network boundary + flow logs | same | agent roles/tool lists, prompt hardening, step-wise confirmations |
+| AIS-13 | 4 instance-level checks | same | container/process sandbox, resource limits, timeouts, file-system/IPC isolation |
+| LOG-15 | 2 checks (newest 50 events sampled) | same | completeness of logging, hallucination/violation detection |
+| IAM-19 | 2 checks | same | whether each permission is *necessary* (no policy simulator in moto) |
+
+Coverage per control is `partial` or `weak` in `controls.json`; every control lists its
+`not_checked` items, and the checker prints them. A green result means "the cloud configuration
+matches", never "the AI system is secure".
+
+moto differences (local only): no Bedrock guardrails; `AdministratorAccess` is not preloaded, so setup creates a
+stand-in policy of the same name; public-access-block does not override ACLs as in real S3.
 
 ## Prerequisites
 
-- Windows + PowerShell, Python 3.12 or 3.13 (not 3.14/3.15, `c7n` fails to install there)
-- [Ollama](https://ollama.com/download) installed and running, with the model pulled:
-  `ollama pull gemma3n:e4b`
+Python 3.12 or 3.13, `pip install -r requirements.txt` (tested with c7n 0.9.53, moto 5.2.4).
+Ollama is only needed for `gemma_probe.py` and `verify_ollama_weights.py`.
 
-Check:
+## Run on moto
 
+Terminal 1:
 ```powershell
-python --version
-ollama list
-```
-
-`ollama list` must show `gemma3n:e4b`. Opening http://localhost:11434 in a browser
-should say "Ollama is running".
-
-## 1. Setup (once)
-
-Open PowerShell in the project folder.
-
-```powershell
-git clone <REPO_URL>
-cd <REPO_FOLDER>
-
-py -3.12 -m venv aicm-env
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-aicm-env\Scripts\activate
-
-pip install -r requirements.txt
-custodian version
-moto_server --help
-```
-
-If a virtual environment `aicm-env` already exists, skip the `py -3.12 -m venv` line.
-(`py -3.13` works too.)
-
-## 2. Start the fake AWS (Terminal 1, leave it running)
-
-```powershell
-cd <PROJECT_FOLDER>
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-aicm-env\Scripts\activate
 moto_server -p 5000
 ```
-
-Moto keeps everything in memory. To reset it, stop it with `Ctrl+C` and start it again.
-
-## 3. Run the checks (Terminal 2)
-
-Open a **new** terminal. Every new terminal needs the 4 environment variables.
-
+Terminal 2 (every new terminal needs the 4 variables):
 ```powershell
-cd <PROJECT_FOLDER>
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-aicm-env\Scripts\activate
-
-$env:AWS_ACCESS_KEY_ID="test"
-$env:AWS_SECRET_ACCESS_KEY="test"
-$env:AWS_DEFAULT_REGION="us-east-1"
-$env:AWS_ENDPOINT_URL="http://localhost:5000"
+$env:AWS_ACCESS_KEY_ID="test"; $env:AWS_SECRET_ACCESS_KEY="test"
+$env:AWS_DEFAULT_REGION="us-east-1"; $env:AWS_ENDPOINT_URL="http://localhost:5000"
+python setup_resources.py          # once per moto session (restart moto or run teardown_resources.py to reset)
+python checker.py --validate       # expected: 7/7 controls and 20/20 sub-checks matched, exit code 0
+python report.py                   # short PASS/FAIL table
+python gemma_probe.py              # optional: real Gemma answer into the monitored log group
+python verify_ollama_weights.py    # optional: re-hash the real Gemma weights (about 1 minute for 7 GB)
 ```
+`$env:OLLAMA_MODELS` must point to the model folder if it is not `%USERPROFILE%\.ollama\models`.
+`python checker.py --ollama-weights` adds the local weights check to the report.
 
-Create the good and bad fake resources (run once per moto session):
+`--validate` fails (exit 1) when a policy did not run, Custodian logged an error, a control has
+no resources, or the flagged set differs from the expected one. All 7 controls show
+NON-COMPLIANT because each has bad resources by design.
 
+## Run on real AWS (sandbox account only; NOT tested in the development sandbox)
+
+The seed creates deliberately insecure resources (public-ACL bucket, world-open security groups,
+an admin role, about 15 `t3.micro` instances). Use a dedicated sandbox account and tear down after.
 ```powershell
-python setup_resources.py
+Remove-Item Env:AWS_ENDPOINT_URL          # talk to real AWS; use your own credentials/profile
+python setup_resources.py --confirm-account <ACCOUNT_ID>
+python checker.py --validate
+python teardown_resources.py --confirm-account <ACCOUNT_ID>
 ```
-
-Link the real Gemma model to the model-integrity check (Ollama must be running).
-Both Gemma scripts must run **after** `setup_resources.py`:
-
-```powershell
-python gemma_hash.py
-python gemma_probe.py
-```
-
-`gemma_hash.py` stores Gemma's real digest as a tag on the model bucket.
-`gemma_probe.py` asks Gemma a question and writes its answer into the fake log group.
-It can take a minute or two on CPU.
-
-Run all 7 policies and print the report:
-
-```powershell
-custodian run -s output policies/aicm-controls.yml --cache-period 0
-python report.py
-```
-
-## Expected result
-
-Each of the 7 policies logs `count:1`, and `report.py` shows 7 rows with `FAIL`,
-each listing only the deliberately non-compliant `bad` resource (for example
-`gemma-model-bad`). The compliant `good` resources are not flagged. The table is also
-saved as `compliance_report.csv`.
-
-Flagged resources per policy: `output\<policy-name>\resources.json`
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `running scripts is disabled` | `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
-| `NoCredentialsError` | The 4 `$env:AWS_...` variables are missing in this terminal |
-| `already exists` error in `setup_resources.py` | Restart moto (Ctrl+C, `moto_server -p 5000`) and run it again |
-| `count:0` right after something changed | Add `--cache-period 0` to the custodian command |
-| `ollama` not recognized | Close PowerShell and open a new window |
-| `gemma_hash.py` or `gemma_probe.py` cannot connect | Start Ollama and check http://localhost:11434 |
-| `pip install c7n` fails with a pyyaml build error | Use Python 3.12 or 3.13 |
-| Terminal opened as "Developer PowerShell for VS" | Use normal PowerShell instead |
+S3 names get the account id as suffix (global uniqueness); the checker strips it before comparing.
+Things to watch on first run: IAM propagation delays (setup retries), the public-ACL bucket needs
+the account-level Block Public Access for ACLs to be off, a stopped instance loses its public IP
+(do not stop instances before the run), For TVM-11 with a real Bedrock guardrail tag instances `guardrail-id=<id>`,
+run `custodian run policies/aws-only/tvm-11-bedrock-guardrail.yml`, then `guardrail_probe.py`.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `setup_resources.py` | Creates good and bad fake resources in moto for all 7 controls |
-| `policies/aicm-controls.yml` | The 7 Cloud Custodian policies |
-| `gemma_hash.py` | Tags the model bucket with the real Gemma digest (MDS-08) |
-| `gemma_probe.py` | Sends a prompt to Gemma and logs the output (LOG-16) |
-| `report.py` | Builds the per-control PASS/FAIL table and `compliance_report.csv` |
+| `controls.json` | Catalogue: official AICM text, checks with basis, expected seeded result, limitations, not-checked items |
+| `policies/aicm-controls.yml` | Custodian policies, one per sub-check |
+| `builtin_checks.py` | Content checks Custodian cannot do (re-hash, manifest, log fields, IAM wildcards, guardrail exists) |
+| `checker.py` | Runs everything, reports every resource, validates against the seeded setup |
+| `setup_resources.py` / `teardown_resources.py` | Create / delete the good and bad resources (moto or AWS) |
+| `report.py` | Short PASS/FAIL table |
+| `verify_ollama_weights.py` | Re-hash the local Gemma weights file (MDS-08, host level) |
+| `gemma_probe.py` | Real Gemma output into the monitored log group (LOG-15) |
+| `guardrail_probe.py` | Behavioural guardrail test, real AWS only (TVM-11) |
+| `policies/aws-only/` | Policies that need real AWS (Bedrock guardrail) |

@@ -1,8 +1,82 @@
-Control,Title,Status,Flagged
-MDS-08,Model Integrity Checks,FAIL,gemma-model-bad
-DSP-21,Data Poisoning Prevention & Detection,FAIL,gemma-data-bad
-TVM-13,Guardrails,FAIL,gemma-inference-bad
-AIS-11,Agents Security Boundaries,FAIL,gemma-inference-sg-bad
-AIS-13,AI Sandboxing,FAIL,gemma-inference-bad
-LOG-16,Output Monitoring,FAIL,/gemma/inference-bad
-IAM-18,Agent Access Restriction,FAIL,gemma-inference-bad
+Control,Title,Resource,Status,Reason
+MDS-08,Model Integrity Checks,gemma-model-bad-notag,NON-COMPLIANT,Baseline checksum tag model-sha256 is missing or not a valid SHA-256 (64 hex).
+MDS-08,Model Integrity Checks,gemma-model-bad-stale,NON-COMPLIANT,Integrity was not re-verified within 365 days (tag integrity-verified-at missing or too old).
+MDS-08,Model Integrity Checks,gemma-model-bad-tagformat,NON-COMPLIANT,Baseline checksum tag model-sha256 is missing or not a valid SHA-256 (64 hex).
+MDS-08,Model Integrity Checks,gemma-model-bad-tampered,NON-COMPLIANT,The checkpoint was re-hashed and its SHA-256 no longer equals the recorded baseline (unauthorized modification). [models/gemma3n-e4b.gguf: recalculated 05b22b1dc915... != baseline ed95c1a3f97c...]
+MDS-08,Model Integrity Checks,gemma-model-good,COMPLIANT,"Regularly calculate and compare checksums using cryptographic hashes of model checkpoints to detect unauthorized modifications. Apply at least annually based on the level of risk, or after any change of hands."
+DSP-21,Data Poisoning Prevention & Detection,gemma-data-bad-acl,NON-COMPLIANT,Bucket ACL grants access to AllUsers/AuthenticatedUsers.
+DSP-21,Data Poisoning Prevention & Detection,gemma-data-bad-logging,NON-COMPLIANT,Server access logging is off: modifications of the data are not recorded.
+DSP-21,Data Poisoning Prevention & Detection,gemma-data-bad-pab,NON-COMPLIANT,Public access block missing or fewer than all four settings on: outsiders could modify or expose the data.
+DSP-21,Data Poisoning Prevention & Detection,gemma-data-bad-tampered,NON-COMPLIANT,"Dataset objects differ from the approved manifest.json (modified, injected or missing objects, or no manifest). [train/part-0002.jsonl: content changed since the manifest was approved]"
+DSP-21,Data Poisoning Prevention & Detection,gemma-data-good,COMPLIANT,"Define, implement and evaluate processes, procedures and technical measures to prevent data poisoning in AI models and continuously detect such."
+TVM-11,Guardrails,gemma-inference-bad-egress,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-guardrail-missing,NON-COMPLIANT,The guardrail named in guardrail-id does not exist (no Lambda function / Bedrock guardrail with that name). [guardrail-id 'gemma-guardrail-missing' does not exist as a Lambda function or a Bedrock guardrail]
+TVM-11,Guardrails,gemma-inference-bad-guardrail-stale,NON-COMPLIANT,Guardrail review is older than 180 days (tag guardrail-reviewed-at missing or too old; 180 days is a project parameter).
+TVM-11,Guardrails,gemma-inference-bad-hops,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-iam-action,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-iam-admin,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-iam-resource,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-imdsv1,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-noguardrail,NON-COMPLIANT,Instance has no guardrail-id tag: no guardrail is applied to this AI system.
+TVM-11,Guardrails,gemma-inference-bad-publicip,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-sg-range,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-sg-v4,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-bad-sg-v6,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+TVM-11,Guardrails,gemma-inference-good,COMPLIANT,"Define and implement processes, procedures and technical measures to apply guardrails to the AI system. Continuously evaluate guardrails for changes in regulatory requirements and risk scenarios."
+AIS-11,Agents Security Boundaries,gemma-inference-sg-bad-egress,COMPLIANT,Establish security boundaries for agents.
+AIS-11,Agents Security Boundaries,gemma-inference-sg-bad-range,NON-COMPLIANT,"Inference port 11434 is reachable from the whole internet (IPv4, IPv6 or through a port range)."
+AIS-11,Agents Security Boundaries,gemma-inference-sg-bad-v4,NON-COMPLIANT,"Inference port 11434 is reachable from the whole internet (IPv4, IPv6 or through a port range)."
+AIS-11,Agents Security Boundaries,gemma-inference-sg-bad-v6,NON-COMPLIANT,"Inference port 11434 is reachable from the whole internet (IPv4, IPv6 or through a port range)."
+AIS-11,Agents Security Boundaries,gemma-inference-sg-good,COMPLIANT,Establish security boundaries for agents.
+AIS-11,Agents Security Boundaries,gemma-vpc-bad-noflowlogs,NON-COMPLIANT,VPC has no flow logs: boundary violations cannot be audited.
+AIS-11,Agents Security Boundaries,gemma-vpc-good,COMPLIANT,Establish security boundaries for agents.
+AIS-11,Agents Security Boundaries,gemma-inference-bad-egress (security group gemma-inference-sg-bad-egress),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-guardrail-missing (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-guardrail-stale (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-hops (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-iam-action (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-iam-admin (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-iam-resource (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-imdsv1 (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-noguardrail (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-publicip (security group gemma-inference-sg-good),OK,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-sg-range (security group gemma-inference-sg-bad-range),NON-COMPLIANT,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-sg-v4 (security group gemma-inference-sg-bad-v4),NON-COMPLIANT,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-bad-sg-v6 (security group gemma-inference-sg-bad-v6),NON-COMPLIANT,effective access chain
+AIS-11,Agents Security Boundaries,gemma-inference-good (security group gemma-inference-sg-good),OK,effective access chain
+AIS-13,AI Sandboxing,gemma-inference-bad-egress,NON-COMPLIANT,Attached security group allows egress to 0.0.0.0/0 or ::/0 (no egress control).
+AIS-13,AI Sandboxing,gemma-inference-bad-guardrail-missing,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-guardrail-stale,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-hops,NON-COMPLIANT,Metadata hop limit > 1: containers/proxies on the host can reach the instance credentials.
+AIS-13,AI Sandboxing,gemma-inference-bad-iam-action,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-iam-admin,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-iam-resource,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-imdsv1,NON-COMPLIANT,IMDSv2 is not required: a tool that is tricked into an SSRF can steal the instance credentials.
+AIS-13,AI Sandboxing,gemma-inference-bad-noguardrail,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-publicip,NON-COMPLIANT,Instance has a public IP address.
+AIS-13,AI Sandboxing,gemma-inference-bad-sg-range,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-sg-v4,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-bad-sg-v6,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+AIS-13,AI Sandboxing,gemma-inference-good,COMPLIANT,Implement sandboxing techniques to execute AI tools and plugins in isolated environments to prevent unintended interactions with critical systems or data and limit the possibility of lateral movement.
+LOG-15,Output Monitoring,/gemma/inference-bad-empty,NON-COMPLIANT,"Logged events do not contain the output content and metadata (output, model, request_id, user_id), or nothing is logged. [no output events logged at all]"
+LOG-15,Output Monitoring,/gemma/inference-bad-fields,NON-COMPLIANT,"Logged events do not contain the output content and metadata (output, model, request_id, user_id), or nothing is logged. [events lack required field(s): model, request_id, user_id]"
+LOG-15,Output Monitoring,/gemma/inference-bad-unmonitored,NON-COMPLIANT,No subscription filter: outputs are logged but not forwarded to any monitor.
+LOG-15,Output Monitoring,/gemma/inference-good,COMPLIANT,Log and monitor all output events (content and metadata) to enable auditing and reporting on usage of AI models.
+IAM-19,Agent Access Restriction,gemma-inference-role-bad-action,NON-COMPLIANT,Allow statement with Action '*' or 'service:*' in an attached or inline policy. [wildcard action in gemma-inference-policy-bad-action: s3:*]
+IAM-19,Agent Access Restriction,gemma-inference-role-bad-admin,NON-COMPLIANT,Allow statement with Action '*' or 'service:*' in an attached or inline policy. [wildcard action in AdministratorAccess: *] | Allow statement with Resource '*' in an attached or inline policy (no resource segregation). [Resource '*' in AdministratorAccess]
+IAM-19,Agent Access Restriction,gemma-inference-role-bad-resource,NON-COMPLIANT,Allow statement with Resource '*' in an attached or inline policy (no resource segregation). [Resource '*' in inline-bad-resource (inline)]
+IAM-19,Agent Access Restriction,gemma-inference-role-good,COMPLIANT,"Restrict access in agent-based solutions to only the tools and plugins strictly necessary for the activity or use case at hand, ensuring resource segregation and adherence to the principle of least privilege."
+IAM-19,Agent Access Restriction,gemma-inference-bad-egress (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-guardrail-missing (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-guardrail-stale (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-hops (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-iam-action (role gemma-inference-role-bad-action),NON-COMPLIANT,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-iam-admin (role gemma-inference-role-bad-admin),NON-COMPLIANT,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-iam-resource (role gemma-inference-role-bad-resource),NON-COMPLIANT,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-imdsv1 (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-noguardrail (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-publicip (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-sg-range (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-sg-v4 (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-bad-sg-v6 (role gemma-inference-role-good),OK,effective access chain
+IAM-19,Agent Access Restriction,gemma-inference-good (role gemma-inference-role-good),OK,effective access chain
